@@ -60,8 +60,8 @@ def generate_image_montage(
     montage_grid (tuple) -- tuple of (n_rows, n_cols) for montage image (default: (7, 10))
     montage_channel_axis (int) -- axis for colour information needed by scikit.util.montage (default: 3)
     """
-    # establish maximum image count per montage grid
-    max_image_count = reduce(lambda nrows, ncols: nrows*ncols, montage_grid)
+    # establish maximum image count per montage grid (less 1 to leave last card blank as per TTS requirements)
+    max_image_count = reduce(lambda nrows, ncols: nrows*ncols, montage_grid)-1
     # chunk image list into small enough groups to fit into montage grid
     chunked_images = [images[i:i + max_image_count] for i in range(0, len(images), max_image_count)]
     # plot each chunk into a montage and export
