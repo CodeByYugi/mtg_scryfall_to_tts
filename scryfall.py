@@ -4,7 +4,6 @@ import requests
 import shutil
 import unicodedata
 import re
-from dotenv import load_dotenv
 
 
 def convert_card_name_to_slug(card_name: str) -> str:
@@ -28,10 +27,11 @@ def convert_card_name_to_slug(card_name: str) -> str:
     return slug_card_name
 
 
-def get_cards_from_print_sets(set_code: str, rarity: str|None=None) -> dict:
+def get_cards_from_print_sets(root_url:str, set_code: str, rarity: str|None=None) -> dict:
     """Function that returns unique card names for a given set code and rarity.
 
     Parameters
+    root_url (str) -- base URL for Scryfall API
     set_code (str) -- three-letter set code to identify the magic set in question (e.g. DSK)
     rarity (str or None) -- optional filter for card rarity, possible values include 'c', 'u', 'r', 'm' (default: None)
     """
@@ -43,11 +43,12 @@ def get_cards_from_print_sets(set_code: str, rarity: str|None=None) -> dict:
     return None
 
 
-def parse_set_by_rarity(set_code: str) -> dict:
+def parse_set_by_rarity(root_url:str, set_code: str) -> dict:
     """Function to parse a Magic set on Scryfall for unique cards contained in booster packs by rarity.
 
     Parameters
     ------
+    root_url (str) -- base URL for Scryfall API
     set_code (str) -- three-letter set code denoting the set
 
     Returns
@@ -56,12 +57,49 @@ def parse_set_by_rarity(set_code: str) -> dict:
     set_dict = dict()
 
     for rarity in ['common', 'uncommon', 'rare', 'mythic']:
-        card_objects = get_cards_from_print_sets(set_code=set_code, rarity=rarity)
+        card_objects = get_cards_from_print_sets(root_url=root_url, set_code=set_code, rarity=rarity)
         if card_objects is not None:
             set_dict[rarity] = card_objects
     
     return set_dict
 
+
+def get_set_basics(root_url:str, set_code: str) -> dict:
+    """Function to get basic lands for a given set code.
+
+    Parameters
+    ------
+    root_url (str) -- base URL for Scryfall API
+    set_code (str) -- three-letter set code denoting the set
+
+    Returns
+        (dict) dictionary of basic land card objects from Scryfall API
+    """
+    r = requests.get(f"{root_url}/cards/search?q=set%3A{set_code}+t:basic")
+    
+    if r.status_code == 200:
+        return r.json().get('data')
+    return None
+
+
+def parse_set(root_url:str, set_code: str) -> dict:
+    """Function to parse a Magic set on Scryfall for unique cards contained in booster packs.
+
+    Parameters
+    ------
+    root_url (str) -- base URL for Scryfall API
+    set_code (str) -- three-letter set code denoting the set
+
+    Returns
+        (dict) dictionary of card objects from Scryfall API
+    """
+    set_dict = parse_set_by_rarity(root_url=root_url, set_code=set_code)
+    # Add basic lands to the set dictionary
+
+    # add basic lands to the set dictionary
+    set_dict['basics'] = get_set_basics(root_url=root_url, set_code=set_code)
+
+    return set_dict
 
 def download_card_image_from_url(image_uri: str, file_path: str) -> None:
     """Function that downloads a card image JPEG from Scryfall for a given scryfall image uri.
@@ -95,15 +133,3 @@ def download_card_images_by_parsing_dict(set_dict: dict, output_dir:str) -> None
         for card_object in item:
             filename=f"{output_dir}/{key}/{convert_card_name_to_slug(card_object.get('name'))}.jpg"
             download_card_image_from_url(card_object.get('image_uris').get('large'), filename)
-
-
-load_dotenv()
-
-root_url = "https://api.scryfall.com"
-set_code = os.environ.get("SET_CODE")
-
-img_out_dir = f'{os.environ.get("OUTPUT_ROOT_DIR")}/{set_code}'
-
-list_of_set_cards_by_rarity = parse_set_by_rarity(set_code)
-
-download_card_images_by_parsing_dict(set_dict=list_of_set_cards_by_rarity, output_dir=img_out_dir)
