@@ -2,7 +2,6 @@ import os
 import imageio.v3 as iio
 from skimage.util import montage
 from pathlib import Path
-from dotenv import load_dotenv
 
 
 def read_image_files_from_folder(folder_path: str) -> list:
@@ -41,14 +40,3 @@ def generate_image_montage(
     """
     image_montage = montage(images, grid_shape=montage_grid, channel_axis=montage_channel_axis)
     iio.imwrite(f'{output_folder}/{output_filename}.jpg', image_montage)
-
-
-load_dotenv()
-
-loaded_images = read_image_files_from_folder(folder_path=os.environ.get('MONTAGE_IMAGE_INPUT_DIR'))
-
-generate_image_montage(
-    images=loaded_images,
-    output_folder=os.environ.get('MONTAGE_IMAGE_OUTPUT_DIR'),
-    output_filename=os.environ.get('SET_CODE')
-)
