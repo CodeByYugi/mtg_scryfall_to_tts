@@ -63,6 +63,43 @@ def parse_set_by_rarity(set_code: str) -> dict:
     return set_dict
 
 
+def get_set_basics(root_url:str, set_code: str) -> dict:
+    """Function to get basic lands for a given set code.
+
+    Parameters
+    ------
+    root_url (str) -- base URL for Scryfall API
+    set_code (str) -- three-letter set code denoting the set
+
+    Returns
+        (dict) dictionary of basic land card objects from Scryfall API
+    """
+    r = requests.get(f"{root_url}/cards/search?q=set%3A{set_code}+t:basic")
+    
+    if r.status_code == 200:
+        return r.json().get('data')
+    return None
+
+
+def parse_set(root_url:str, set_code: str) -> dict:
+    """Function to parse a Magic set on Scryfall for unique cards contained in booster packs.
+
+    Parameters
+    ------
+    root_url (str) -- base URL for Scryfall API
+    set_code (str) -- three-letter set code denoting the set
+
+    Returns
+        (dict) dictionary of card objects from Scryfall API
+    """
+    set_dict = parse_set_by_rarity(root_url=root_url, set_code=set_code)
+    # Add basic lands to the set dictionary
+
+    # add basic lands to the set dictionary
+    set_dict['basics'] = get_set_basics(root_url=root_url, set_code=set_code)
+
+    return set_dict
+
 def download_card_image_from_url(image_uri: str, file_path: str) -> None:
     """Function that downloads a card image JPEG from Scryfall for a given scryfall image uri.
 
