@@ -131,5 +131,15 @@ def download_card_images_by_parsing_dict(set_dict: dict, output_dir:str) -> None
     """
     for key, item in set_dict.items():
         for card_object in item:
-            filename=f"{output_dir}/{key}/{convert_card_name_to_slug(card_object.get('name'))}.jpg"
-            download_card_image_from_url(card_object.get('image_uris').get('large'), filename)
+            # single-faced cards will have image_uris as key
+            if card_object.get('image_uris') is not None:
+                filename=f"{output_dir}/{key}/{convert_card_name_to_slug(card_object.get('name'))}.jpg"
+                download_card_image_from_url(card_object.get('image_uris').get('large'), filename)
+            # double-faced cards will have info for each side nested inside attribute card_faces
+            elif card_object.get('card_faces') is not None:
+                # for each card face extract name and image
+                for card_face in card_object.get('card_faces'):
+                    filename=f"{output_dir}/{key}/{convert_card_name_to_slug(card_face.get('name'))}.jpg"
+                    download_card_image_from_url(card_face.get('image_uris').get('large'), filename)
+            else:
+                raise AttributeError(f"card object {card_object.get('name')} does not have attributes image_uris or card_faces!")
