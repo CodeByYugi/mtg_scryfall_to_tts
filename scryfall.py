@@ -27,15 +27,26 @@ def convert_card_name_to_slug(card_name: str) -> str:
     return slug_card_name
 
 
-def get_cards_from_print_sets(root_url:str, set_code: str, rarity: str|None=None) -> dict:
+def get_cards_from_print_sets(
+        root_url:str, set_code: str, rarity: str|None=None, collector_numbers: list|None=None
+    ) -> dict:
     """Function that returns unique card names for a given set code and rarity.
 
     Parameters
     root_url (str) -- base URL for Scryfall API
     set_code (str) -- three-letter set code to identify the magic set in question (e.g. DSK)
     rarity (str or None) -- optional filter for card rarity, possible values include 'c', 'u', 'r', 'm' (default: None)
+    collector_numbers (list or None) -- if a list of two numbers are passed, the scryfall search will limit the range of cards
+        to the given range of collector numbers. If omitted, the scryfall search option is:booster is used instead.
     """
-    r = requests.get(f"{root_url}/cards/search?q=set%3A{set_code}+is:booster+r%3D{rarity}")
+    # if collector number range given, use to determine draft card range
+    if collector_numbers is not None:
+        r = requests.get(
+            f"{root_url}/cards/search?q=set%3A{set_code}+cn≥{collector_numbers[0]}+cn≤{collector_numbers[1]}+r%3D{rarity}"
+        )
+    # otherwise use scryfall filter of "is:booster" to determine draft cards
+    else:
+        r = requests.get(f"{root_url}/cards/search?q=set%3A{set_code}+is:booster+r%3D{rarity}")
     
     if r.status_code == 200:
         return r.json().get('data')
@@ -43,13 +54,15 @@ def get_cards_from_print_sets(root_url:str, set_code: str, rarity: str|None=None
     return None
 
 
-def parse_set_by_rarity(root_url:str, set_code: str) -> dict:
+def parse_set_by_rarity(root_url:str, set_code: str, collector_numbers: list|None=None) -> dict:
     """Function to parse a Magic set on Scryfall for unique cards contained in booster packs by rarity.
 
     Parameters
     ------
     root_url (str) -- base URL for Scryfall API
     set_code (str) -- three-letter set code denoting the set
+    collector_numbers (list or None) -- if a list of two numbers are passed, the scryfall search will limit the range of cards
+        to the given range of collector numbers. If omitted, the scryfall search option is:booster is used instead.
 
     Returns
         (dict) dictionary of card objects from Scryfall API by rarity
@@ -57,7 +70,7 @@ def parse_set_by_rarity(root_url:str, set_code: str) -> dict:
     set_dict = dict()
 
     for rarity in ['common', 'uncommon', 'rare', 'mythic']:
-        card_objects = get_cards_from_print_sets(root_url=root_url, set_code=set_code, rarity=rarity)
+        card_objects = get_cards_from_print_sets(root_url=root_url, set_code=set_code, rarity=rarity, collector_numbers=collector_numbers)
         if card_objects is not None:
             set_dict[rarity] = card_objects
     
@@ -82,21 +95,22 @@ def get_set_basics(root_url:str, set_code: str) -> dict:
     return None
 
 
-def parse_set(root_url:str, set_code: str) -> dict:
+def parse_set(root_url:str, set_code: str, collector_numbers: list|None=None) -> dict:
     """Function to parse a Magic set on Scryfall for unique cards contained in booster packs.
 
     Parameters
     ------
     root_url (str) -- base URL for Scryfall API
     set_code (str) -- three-letter set code denoting the set
+    collector_numbers (list or None) -- if a list of two numbers are passed, the scryfall search will limit the range of cards
+        to the given range of collector numbers. If omitted, the scryfall search option is:booster is used instead.
 
     Returns
         (dict) dictionary of card objects from Scryfall API
     """
-    set_dict = parse_set_by_rarity(root_url=root_url, set_code=set_code)
+    # parse set cards by rarity
+    set_dict = parse_set_by_rarity(root_url=root_url, set_code=set_code, collector_numbers=collector_numbers)
     # Add basic lands to the set dictionary
-
-    # add basic lands to the set dictionary
     set_dict['basics'] = get_set_basics(root_url=root_url, set_code=set_code)
 
     return set_dict
