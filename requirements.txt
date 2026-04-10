@@ -1,0 +1,4 @@
+requests
+scikit-image
+imageio
+python-dotenv
