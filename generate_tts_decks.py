@@ -22,9 +22,13 @@ if __name__ == "__main__":
         # get API root URL from config
         root_url = config.get("SCRYFALL_API_URL")
         # parse Scryfall for set code and compile card information
-        list_of_set_cards = parse_set(root_url, set_code, collector_numbers=collector_number_range)
+        list_of_set_cards = parse_set(
+            root_url, set_code, collector_numbers=collector_number_range
+        )
         # download card images and store to output directory
-        download_card_images_by_parsing_dict(set_dict=list_of_set_cards, output_dir=img_dir)
+        download_card_images_by_parsing_dict(
+            set_dict=list_of_set_cards, output_dir=img_dir
+        )
 
     # check if montage generation needed
     if config.get("GENERATE_MONTAGE") == 'True':
