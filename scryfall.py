@@ -1,9 +1,9 @@
-import os
 import errno
-import requests
+import os
+import re
 import shutil
 import unicodedata
-import re
+import requests
 
 
 def parse_response_warnings(response):

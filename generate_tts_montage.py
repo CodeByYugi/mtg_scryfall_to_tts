@@ -1,7 +1,7 @@
 from functools import reduce
+from pathlib import Path
 import imageio.v3 as iio
 from skimage.util import montage
-from pathlib import Path
 
 
 def read_image_files_from_folder(folder_path: str) -> list:

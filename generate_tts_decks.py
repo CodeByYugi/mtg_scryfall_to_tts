@@ -1,6 +1,6 @@
 from dotenv import dotenv_values
-from scryfall import parse_set, download_card_images_by_parsing_dict
 from generate_tts_montage import parse_set_image_folders
+from scryfall import download_card_images_by_parsing_dict, parse_set
 
 
 if __name__ == "__main__":
