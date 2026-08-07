@@ -6,6 +6,15 @@ import unicodedata
 import re
 
 
+def parse_response_warnings(response):
+    print(
+        f"URL: {response.url}\n"
+        f"Status code: {response.status_code}\n"
+        f"Reason: {response.reason}\n"
+        f"Detail: {response.text}\n"
+    )
+
+
 def convert_card_name_to_slug(card_name: str) -> str:
     """Function to convert arbitrary card name into a filename-safe name.
 
@@ -57,7 +66,9 @@ def get_cards_from_print_sets(
     
     if r.status_code == 200:
         return r.json().get('data')
-    
+    else:
+        print(f"WARNING! Could not get {rarity} for set code {set_code}.\n")
+        parse_response_warnings(r)
     return None
 
 
@@ -106,6 +117,9 @@ def get_set_basics(root_url:str, set_code: str) -> dict:
     
     if r.status_code == 200:
         return r.json().get('data')
+    else:
+        print(f"WARNING! Could not get basics for set code {set_code}.\n")
+        parse_response_warnings(r)
     return None
 
 
@@ -155,7 +169,9 @@ def download_card_image_from_url(image_uri: str, file_path: str) -> None:
                     raise
         with open(file_path, 'wb') as f:
             r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, f) 
+    else:
+        print("WARNING!!! Image could not be donwloaded!")
+        parse_response_warnings(r) 
 
 
 def download_card_images_by_parsing_dict(
