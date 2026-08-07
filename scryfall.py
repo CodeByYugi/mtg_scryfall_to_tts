@@ -37,13 +37,14 @@ def convert_card_name_to_slug(card_name: str) -> str:
 
 
 def get_cards_from_print_sets(
-        root_url:str, set_code: str,
+        root_url:str, headers:dict, set_code: str,
         rarity: str|None=None, collector_numbers: list|None=None
     ) -> dict:
     """Function that returns unique card names for a given set code and rarity.
 
     Parameters
     root_url (str) -- base URL for Scryfall API
+    headers (dict) -- HTTP request headers
     set_code (str) -- three-letter set code to identify
         the magic set in question (e.g. DSK)
     rarity (str or None) -- optional filter for card rarity,
@@ -55,14 +56,12 @@ def get_cards_from_print_sets(
     """
     # if collector number range given, use to determine draft card range
     if collector_numbers is not None:
-        r = requests.get(
-            f"{root_url}/cards/search?q=set%3A{set_code}+cn≥{collector_numbers[0]}+cn≤{collector_numbers[1]}+r%3D{rarity}"
-        )
+        url = f"{root_url}/cards/search?q=set%3A{set_code}+cn≥{collector_numbers[0]}+cn≤{collector_numbers[1]}+r%3D{rarity}"
+        r = requests.get(url, headers=headers)
     # otherwise use scryfall filter of "is:booster" to determine draft cards
     else:
-        r = requests.get(
-            f"{root_url}/cards/search?q=set%3A{set_code}+is:booster+r%3D{rarity}"
-        )
+        url = f"{root_url}/cards/search?q=set%3A{set_code}+is:booster+r%3D{rarity}"
+        r = requests.get(url, headers=headers)
     
     if r.status_code == 200:
         return r.json().get('data')
@@ -73,13 +72,14 @@ def get_cards_from_print_sets(
 
 
 def parse_set_by_rarity(
-        root_url:str, set_code: str, collector_numbers: list|None=None
+        root_url:str, headers:dict, set_code: str, collector_numbers: list|None=None
     ) -> dict:
     """Function to parse a Magic set on Scryfall for cards by rarity.
 
     Parameters
     ------
     root_url (str) -- base URL for Scryfall API
+    headers (dict) -- HTTP request headers
     set_code (str) -- three-letter set code denoting the set
     collector_numbers (list or None) -- if a list of two numbers are passed,
         the scryfall search will limit the range of cards to the given range of
@@ -93,7 +93,7 @@ def parse_set_by_rarity(
 
     for rarity in ['common', 'uncommon', 'rare', 'mythic']:
         card_objects = get_cards_from_print_sets(
-            root_url=root_url, set_code=set_code,
+            root_url=root_url, headers=headers, set_code=set_code,
             rarity=rarity, collector_numbers=collector_numbers
         )
         if card_objects is not None:
@@ -102,18 +102,20 @@ def parse_set_by_rarity(
     return set_dict
 
 
-def get_set_basics(root_url:str, set_code: str) -> dict:
+def get_set_basics(root_url:str, headers:dict, set_code: str) -> dict:
     """Function to get basic lands for a given set code.
 
     Parameters
     ------
     root_url (str) -- base URL for Scryfall API
+    headers (dict) -- HTTP request headers
     set_code (str) -- three-letter set code denoting the set
 
     Returns
         (dict) dictionary of basic land card objects from Scryfall API
     """
-    r = requests.get(f"{root_url}/cards/search?q=set%3A{set_code}+t:basic")
+    url = f"{root_url}/cards/search?q=set%3A{set_code}+t:basic"
+    r = requests.get(url, headers=headers)
     
     if r.status_code == 200:
         return r.json().get('data')
@@ -124,13 +126,14 @@ def get_set_basics(root_url:str, set_code: str) -> dict:
 
 
 def parse_set(
-        root_url:str, set_code: str, collector_numbers: list|None=None
+        root_url:str, headers:dict, set_code: str, collector_numbers: list|None=None
     ) -> dict:
     """Function to parse a Magic set on Scryfall for unique cards.
 
     Parameters
     ------
     root_url (str) -- base URL for Scryfall API
+    headers (dict) -- dictionary of HTTP request headers
     set_code (str) -- three-letter set code denoting the set
     collector_numbers (list or None) -- if a list of two numbers are passed,
         the scryfall search will limit the range of cards to the given range of
@@ -142,23 +145,24 @@ def parse_set(
     """
     # parse set cards by rarity
     set_dict = parse_set_by_rarity(
-        root_url=root_url, set_code=set_code,
-        collector_numbers=collector_numbers
+        root_url=root_url, headers=headers,
+        set_code=set_code, collector_numbers=collector_numbers,
     )
     # Add basic lands to the set dictionary
-    set_dict['basics'] = get_set_basics(root_url=root_url, set_code=set_code)
+    set_dict['basics'] = get_set_basics(root_url=root_url, headers=headers, set_code=set_code)
 
     return set_dict
 
-def download_card_image_from_url(image_uri: str, file_path: str) -> None:
+def download_card_image_from_url(image_uri: str, headers:dict, file_path: str) -> None:
     """Function to download card image JPEG from Scryfall by scryfall image uri
 
     Parameters
     ------
     image_uri (str) -- uri to card image on scryfall
+    headers (dict) -- HTTP request header
     file_path (str) -- output file path to save image (.jpg) to
     """
-    r = requests.get(image_uri, stream=True)
+    r = requests.get(image_uri, headers=headers, stream=True)
 
     if r.status_code == 200:
         if not os.path.exists(os.path.dirname(file_path)):
@@ -169,19 +173,22 @@ def download_card_image_from_url(image_uri: str, file_path: str) -> None:
                     raise
         with open(file_path, 'wb') as f:
             r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
     else:
         print("WARNING!!! Image could not be donwloaded!")
         parse_response_warnings(r) 
 
 
 def download_card_images_by_parsing_dict(
-        set_dict: dict, output_dir:str
+        set_dict: dict, output_dir:str, headers:dict
     ) -> None:
     """Function that parses over a grouped dictionary of scryfall card objects.
     
     Dictionary grouping could for example be by rarity, the dictionary grouping
     will translate into subfolders in the specified output directory where card
     images will be stored.
+
+    headers (dict) -- HTP Request headers
     """
     for key, item in set_dict.items():
         for card_object in item:
@@ -189,7 +196,9 @@ def download_card_images_by_parsing_dict(
             if card_object.get('image_uris') is not None:
                 filename=f"{output_dir}/{key}/{convert_card_name_to_slug(card_object.get('name'))}.jpg"
                 download_card_image_from_url(
-                    card_object.get('image_uris').get('large'), filename
+                    card_object.get('image_uris').get('large'),
+                    headers,
+                    filename,
                 )
             # double-faced cards have info for each side nested in 'card_faces'
             elif card_object.get('card_faces') is not None:
@@ -197,7 +206,9 @@ def download_card_images_by_parsing_dict(
                 for card_face in card_object.get('card_faces'):
                     filename=f"{output_dir}/{key}/{convert_card_name_to_slug(card_face.get('name'))}.jpg"
                     download_card_image_from_url(
-                        card_face.get('image_uris').get('large'), filename
+                        card_face.get('image_uris').get('large'),
+                        headers,
+                        filename,
                     )
             else:
                 raise AttributeError(

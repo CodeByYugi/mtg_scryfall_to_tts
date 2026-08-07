@@ -21,13 +21,25 @@ if __name__ == "__main__":
     if config.get("SOURCE_IMAGES") == 'True':
         # get API root URL from config
         root_url = config.get("SCRYFALL_API_URL")
+        request_headers = {
+            'User-Agent': config.get("HEADER_USER_AGENT"),
+            'Accept': config.get("HEADER_ACCEPT"),
+        }
         # parse Scryfall for set code and compile card information
         list_of_set_cards = parse_set(
-            root_url, set_code, collector_numbers=collector_number_range
+            root_url, request_headers, set_code,
+            collector_numbers=collector_number_range
         )
+        # check if set dictionary is empty
+        if not list_of_set_cards:
+            raise ValueError(
+                f"Set dictionary is empty for set code: {set_code}. "
+                "Check if set code is valid or if collector number range is correct."
+            )
         # download card images and store to output directory
         download_card_images_by_parsing_dict(
-            set_dict=list_of_set_cards, output_dir=img_dir
+            set_dict=list_of_set_cards, output_dir=img_dir,
+            headers=request_headers,
         )
 
     # check if montage generation needed
